@@ -30,6 +30,10 @@ cd frontend && npm install && npm run dev
 
 Le backend lit automatiquement le fichier `.env` de la racine.
 
+Outils de développement lancés par `docker compose` :
+- **Adminer** (consulter la base) : http://localhost:8082 (Système `PostgreSQL`, serveur `postgres`, utilisateur `snap`, mot de passe `snap`, base `snapwedding`)
+- **Console RustFS** (consulter les fichiers) : http://localhost:9001/rustfs/console/ (`rustfsadmin` / `rustfsadmin`)
+
 **Tester l'API dans Swagger** : connectez-vous sur le front, cliquez sur « Jeton Swagger » en haut de la page, puis collez le jeton dans le bouton **Authorize** de Swagger.
 
 ## Architecture
@@ -40,10 +44,10 @@ Monolithe modulaire vérifié par Spring Modulith. La documentation générée e
 | :--- | :--- |
 | `event` | Événements, code public, QR code, fermeture / suspension |
 | `album` | Albums d'un événement |
-| `media` | Dépôt des photos sur S3, galerie paginée, modération |
+| `media` | Stockage S3 des photos, galerie paginée, modération, nettoyage des fichiers |
 | `guest` | Pseudo + jeton d'invité |
 | `admin` | Vue super-admin transverse |
-| `shared` | Sécurité, config S3, gestion des erreurs |
+| `shared` | Sécurité JWT, utilisateur courant, gestion des erreurs, Swagger |
 
 ## Jeton d'invité
 

@@ -1,23 +1,34 @@
 package fr.limayrac.snapwedding;
 
 import com.jayway.jsonpath.JsonPath;
+import fr.limayrac.snapwedding.media.internal.Media;
+import fr.limayrac.snapwedding.media.internal.MediaRepository;
+import jakarta.persistence.EntityManagerFactory;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -35,20 +46,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>
  * disabledWithoutDocker : sans Docker, le test est ignoré au lieu d'échouer.
  */
-@SpringBootTest(properties = "GOOGLE_CLIENT_ID=test-client-id")
+@SpringBootTest(properties = {
+        "GOOGLE_CLIENT_ID=test-client-id",
+        // Compte les requêtes SQL : sert à prouver l'absence de N+1 sur la galerie
+        "spring.jpa.properties.hibernate.generate_statistics=true"
+})
 @AutoConfigureMockMvc
-@Testcontainers(disabledWithoutDocker = true)
+@Import(TestcontainersConfiguration.class)
+@Testcontainers(disabledWithoutDocker = true)   // sans Docker, le test est ignoré au lieu d'échouer
 class OrganizerIsolationIntegrationTest {
 
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18");
+    /** Pas de RustFS dans ce test : il porte sur l'isolation et le SQL, pas sur le stockage. */
+    @MockitoBean
+    private S3Client s3Client;
 
     @Autowired
     private MockMvc mvc;
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private MediaRepository mediaRepository;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     private static RequestPostProcessor organizer(String sub) {
         return jwt().jwt(token -> token.subject(sub));
@@ -100,23 +122,75 @@ class OrganizerIsolationIntegrationTest {
     }
 
     @Test
-    void deletingAnEventAlsoDeletesItsAlbumsThroughTheEventDeletedEvent() throws Exception {
+    void anOrganizerCanNeitherSeeNorModerateThePhotosOfAnotherOrganizer() throws Exception {
+        String eventId = createEvent("alice", "Mariage d'Alice");
+        String albumId = createAlbum("alice", eventId, "Cérémonie");
+        Media photo = mediaRepository.save(aPhoto(eventId, albumId, 0));
+
+        mvc.perform(get("/api/events/" + eventId + "/media").with(organizer("bob")))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/events/" + eventId + "/media/" + photo.getId() + "/hide").with(organizer("bob")))
+                .andExpect(status().isNotFound());
+        mvc.perform(delete("/api/events/" + eventId + "/media/" + photo.getId()).with(organizer("bob")))
+                .andExpect(status().isNotFound());
+
+        // Alice voit sa photo, avec le pseudo de l'invité et un lien temporaire, mais sans la clé S3
+        mvc.perform(get("/api/events/" + eventId + "/media").with(organizer("alice")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].guestNickname").value("Invité 0"))
+                .andExpect(jsonPath("$.content[0].hidden").value(false))
+                .andExpect(jsonPath("$.content[0].url").isNotEmpty())
+                .andExpect(jsonPath("$.content[0].objectKey").doesNotExist());
+
+        // Alice peut la masquer
+        mvc.perform(post("/api/events/" + eventId + "/media/" + photo.getId() + "/hide").with(organizer("alice")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hidden").value(true));
+    }
+
+    @Test
+    void theGalleryOf50PhotosCosts3SqlQueriesNotOnePerPhoto() throws Exception {
+        String eventId = createEvent("dave", "Séminaire");
+        String albumId = createAlbum("dave", eventId, "Plénière");
+        List<Media> photos = new ArrayList<>();
+        for (int i = 0; i < 60; i++) {
+            photos.add(aPhoto(eventId, albumId, i));
+        }
+        mediaRepository.saveAll(photos);
+
+        Statistics stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        stats.clear();
+
+        mvc.perform(get("/api/events/" + eventId + "/media?size=50").with(organizer("dave")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(50))
+                .andExpect(jsonPath("$.page.totalElements").value(60));
+
+        // 1 : l'événement appartient-il à dave ?  2 : la page de 50 photos.  3 : le total (pagination).
+        assertThat(stats.getPrepareStatementCount()).isEqualTo(3);
+    }
+
+    @Test
+    void deletingAnEventAlsoDeletesItsAlbumsAndPhotosThroughTheEventDeletedEvent() throws Exception {
         String eventId = createEvent("carol", "Anniversaire");
-        createAlbum("carol", eventId, "Gâteau");
+        String albumId = createAlbum("carol", eventId, "Gâteau");
         createAlbum("carol", eventId, "Danse");
+        mediaRepository.save(aPhoto(eventId, albumId, 1));
+        mediaRepository.save(aPhoto(eventId, albumId, 2));
 
         mvc.perform(delete("/api/events/" + eventId).with(organizer("carol")))
                 .andExpect(status().isNoContent());
 
-        // L'écouteur du module album est asynchrone (après le commit) : on attend qu'il ait fini
+        // Les écouteurs des modules album et media sont asynchrones (après le commit) : on attend
         Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
         long remaining;
         do {
-            remaining = countAlbums(eventId);
+            remaining = count("albums", eventId) + count("media", eventId);
             if (remaining > 0) Thread.sleep(100);
         } while (remaining > 0 && Instant.now().isBefore(deadline));
 
         assertThat(remaining).isZero();
+        verify(s3Client).deleteObjects(any(Consumer.class));   // les fichiers ont été supprimés de S3
     }
 
     @Test
@@ -149,7 +223,13 @@ class OrganizerIsolationIntegrationTest {
         return JsonPath.read(json, "$.id");
     }
 
-    private long countAlbums(String eventId) {
-        return jdbc.queryForObject("select count(*) from albums where event_id = ?::uuid", Long.class, eventId);
+    private long count(String table, String eventId) {
+        return jdbc.queryForObject("select count(*) from " + table + " where event_id = ?::uuid", Long.class, eventId);
+    }
+
+    private static Media aPhoto(String eventId, String albumId, int i) {
+        return new Media(UUID.fromString(eventId), UUID.fromString(albumId), UUID.randomUUID(), "Invité " + i,
+                "events/" + eventId + "/" + UUID.randomUUID() + ".jpg", "image/jpeg", 2048,
+                Instant.now().minusSeconds(i));
     }
 }

@@ -5,7 +5,7 @@ package fr.limayrac.snapwedding.shared.exception;
  * donc le switch de l'ApiExceptionHandler est vérifié par le compilateur (aucun cas oublié).
  */
 public sealed abstract class SnapWeddingException extends RuntimeException
-        permits ResourceNotFoundException, InvalidRequestException, ConflictException {
+        permits ResourceNotFoundException, InvalidRequestException, ConflictException, StorageException {
 
     protected SnapWeddingException(String message) {
         super(message);

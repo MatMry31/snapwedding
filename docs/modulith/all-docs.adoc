@@ -9,10 +9,6 @@ include::module-admin.adoc[]
 plantuml::module-guest.puml[,,format=svg]
 include::module-guest.adoc[]
 
-== Médias
-plantuml::module-media.puml[,,format=svg]
-include::module-media.adoc[]
-
 == Partagé
 plantuml::module-shared.puml[,,format=svg]
 include::module-shared.adoc[]
@@ -24,4 +20,8 @@ include::module-event.adoc[]
 == Albums
 plantuml::module-album.puml[,,format=svg]
 include::module-album.adoc[]
+
+== Médias
+plantuml::module-media.puml[,,format=svg]
+include::module-media.adoc[]
 

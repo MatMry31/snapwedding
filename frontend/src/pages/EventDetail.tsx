@@ -10,19 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { EventStatusBadge } from "@/components/EventStatusBadge";
 import { EventFormDialog } from "@/components/EventFormDialog";
+import { MediaGallery } from "@/components/MediaGallery";
 
 export default function EventDetail() {
   const { eventId = "" } = useParams();
@@ -33,6 +24,12 @@ export default function EventDetail() {
   const { data: event, isLoading, error } = useQuery({
     queryKey: ["event", eventId],
     queryFn: () => api.getEvent(eventId),
+  });
+  // Même clé que dans AlbumsCard : React Query ne fait qu'un seul appel et partage le résultat
+  const { data: albums = [] } = useQuery({
+    queryKey: ["albums", eventId],
+    queryFn: () => api.getAlbums(eventId),
+    enabled: !!event,
   });
 
   const refresh = () => {
@@ -120,6 +117,8 @@ export default function EventDetail() {
         <AlbumsCard eventId={event.id} />
       </div>
 
+      <MediaGallery eventId={event.id} albums={albums} />
+
       <EventFormDialog
         open={editing}
         onOpenChange={setEditing}
@@ -202,7 +201,11 @@ function AlbumsCard({ eventId }: { eventId: string }) {
   });
   const remove = useMutation({
     mutationFn: (id: string) => api.deleteAlbum(eventId, id),
-    onSuccess: () => { refresh(); toast.success("Album supprimé"); },
+    onSuccess: () => {
+      refresh();
+      queryClient.invalidateQueries({ queryKey: ["media", eventId] }); // ses photos sont supprimées aussi
+      toast.success("Album et photos supprimés");
+    },
     onError,
   });
 
@@ -276,39 +279,5 @@ function AlbumRow({ album, onRename, onDelete }: { album: Album; onRename: (name
         </>
       )}
     </li>
-  );
-}
-
-/* ---------- Bouton avec confirmation ---------- */
-
-function ConfirmButton(props: {
-  label?: string;
-  icon: React.ReactNode;
-  iconOnly?: boolean;
-  destructive?: boolean;
-  title: string;
-  description: string;
-  onConfirm: () => void;
-}) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        {props.iconOnly ? (
-          <Button variant="ghost" size="icon" aria-label={props.title}>{props.icon}</Button>
-        ) : (
-          <Button variant={props.destructive ? "destructive" : "outline"}>{props.icon} {props.label}</Button>
-        )}
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{props.title}</AlertDialogTitle>
-          <AlertDialogDescription>{props.description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction onClick={props.onConfirm}>Confirmer</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

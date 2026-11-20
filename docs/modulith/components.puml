@@ -20,6 +20,7 @@ System_Boundary("SnapWeddingApplication_boundary", "SnapWeddingApplication", $ta
     Component(SnapWeddingApplication.SnapWeddingApplication.Partagé, "Partagé", $techn="Module", $descr="", $tags="", $link="")
     Component(SnapWeddingApplication.SnapWeddingApplication.Événements, "Événements", $techn="Module", $descr="", $tags="", $link="")
     Component(SnapWeddingApplication.SnapWeddingApplication.Albums, "Albums", $techn="Module", $descr="", $tags="", $link="")
+    Component(SnapWeddingApplication.SnapWeddingApplication.Médias, "Médias", $techn="Module", $descr="", $tags="", $link="")
   }
 
 }
@@ -28,6 +29,10 @@ Rel(SnapWeddingApplication.SnapWeddingApplication.Événements, SnapWeddingAppli
 Rel(SnapWeddingApplication.SnapWeddingApplication.Albums, SnapWeddingApplication.SnapWeddingApplication.Événements, "listens to", $techn="", $tags="", $link="")
 Rel(SnapWeddingApplication.SnapWeddingApplication.Albums, SnapWeddingApplication.SnapWeddingApplication.Partagé, "depends on", $techn="", $tags="", $link="")
 Rel(SnapWeddingApplication.SnapWeddingApplication.Albums, SnapWeddingApplication.SnapWeddingApplication.Événements, "uses", $techn="", $tags="", $link="")
+Rel(SnapWeddingApplication.SnapWeddingApplication.Médias, SnapWeddingApplication.SnapWeddingApplication.Événements, "listens to", $techn="", $tags="", $link="")
+Rel(SnapWeddingApplication.SnapWeddingApplication.Médias, SnapWeddingApplication.SnapWeddingApplication.Albums, "listens to", $techn="", $tags="", $link="")
+Rel(SnapWeddingApplication.SnapWeddingApplication.Médias, SnapWeddingApplication.SnapWeddingApplication.Partagé, "depends on", $techn="", $tags="", $link="")
+Rel(SnapWeddingApplication.SnapWeddingApplication.Médias, SnapWeddingApplication.SnapWeddingApplication.Événements, "uses", $techn="", $tags="", $link="")
 
 SHOW_LEGEND(true)
 hide stereotypes

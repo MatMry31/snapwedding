@@ -28,6 +28,19 @@ services:
     volumes:
       - rustfs_data:/data
 
+  # Outil de développement : interface web pour consulter la base (http://localhost:8082)
+  # Système : PostgreSQL, Serveur : postgres, Utilisateur / mot de passe / base : ceux du .env
+  adminer:
+    image: adminer:5.5.1
+    container_name: snapwedding-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres   # nom du service PostgreSQL dans le réseau Docker
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+
 volumes:
   postgres_data:
   rustfs_data:

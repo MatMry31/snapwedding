@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +31,7 @@ class AlbumServiceTest {
 
     @Mock AlbumRepository albumRepository;
     @Mock EventApi eventApi;
+    @Mock ApplicationEventPublisher events;
 
     @InjectMocks AlbumService albumService;
 
@@ -54,5 +56,6 @@ class AlbumServiceTest {
 
         verify(eventApi).assertOwnedByCurrentOrganizer(MY_EVENT);
         verify(albumRepository, never()).delete(any());
+        verify(events, never()).publishEvent(any());   // aucune photo ne doit être supprimée
     }
 }

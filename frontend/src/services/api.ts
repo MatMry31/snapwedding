@@ -31,6 +31,19 @@ export interface Album {
   createdAt: string;
 }
 
+/** OrganizerMediaResponse : une photo vue par l'organisateur (masquées comprises) */
+export interface OrganizerMedia {
+  id: string;
+  albumId: string;
+  guestNickname: string;
+  contentType: string;
+  sizeBytes: number;
+  hidden: boolean;
+  createdAt: string;
+  /** Lien temporaire (15 min) vers le fichier sur RustFS */
+  url: string;
+}
+
 /** Format Spring Data "VIA_DTO" */
 export interface PageResponse<T> {
   content: T[];
@@ -107,4 +120,19 @@ export const api = {
 
   deleteAlbum: (eventId: string, albumId: string) =>
     json<void>(`/api/events/${eventId}/albums/${albumId}`, { method: "DELETE" }),
+
+  /* ---------- Photos : galerie et modération de l'organisateur ---------- */
+
+  getEventMedia: (eventId: string, page: number, albumId?: string) =>
+    json<PageResponse<OrganizerMedia>>(`/api/events/${eventId}/media`, {},
+      { page, size: 48, ...(albumId ? { albumId } : {}) }),
+
+  hideMedia: (eventId: string, mediaId: string) =>
+    json<OrganizerMedia>(`/api/events/${eventId}/media/${mediaId}/hide`, { method: "POST" }),
+
+  showMedia: (eventId: string, mediaId: string) =>
+    json<OrganizerMedia>(`/api/events/${eventId}/media/${mediaId}/show`, { method: "POST" }),
+
+  deleteMedia: (eventId: string, mediaId: string) =>
+    json<void>(`/api/events/${eventId}/media/${mediaId}`, { method: "DELETE" }),
 };

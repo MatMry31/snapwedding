@@ -4,6 +4,7 @@ import fr.limayrac.snapwedding.shared.exception.ConflictException;
 import fr.limayrac.snapwedding.shared.exception.InvalidRequestException;
 import fr.limayrac.snapwedding.shared.exception.ResourceNotFoundException;
 import fr.limayrac.snapwedding.shared.exception.SnapWeddingException;
+import fr.limayrac.snapwedding.shared.exception.StorageException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +38,10 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             case ResourceNotFoundException e -> error(HttpStatus.NOT_FOUND, "Resource not found");
             case InvalidRequestException e -> error(HttpStatus.BAD_REQUEST, e.getMessage());
             case ConflictException e -> error(HttpStatus.CONFLICT, e.getMessage());
+            case StorageException e -> {
+                log.error("Object storage error", e);
+                yield error(HttpStatus.INTERNAL_SERVER_ERROR, "File storage error");
+            }
         };
     }
 

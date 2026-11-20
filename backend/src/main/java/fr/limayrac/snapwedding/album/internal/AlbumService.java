@@ -1,6 +1,8 @@
 package fr.limayrac.snapwedding.album.internal;
 
+import fr.limayrac.snapwedding.album.AlbumDeleted;
 import fr.limayrac.snapwedding.event.EventApi;
+import org.springframework.context.ApplicationEventPublisher;
 import fr.limayrac.snapwedding.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class AlbumService {
 
     private final AlbumRepository albumRepository;
     private final EventApi eventApi;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public Album create(UUID eventId, String name) {
@@ -45,6 +48,8 @@ public class AlbumService {
     @Transactional
     public void delete(UUID eventId, UUID albumId) {
         albumRepository.delete(findOwned(eventId, albumId));
+        // Le module media supprimera les photos de l'album après le commit
+        events.publishEvent(new AlbumDeleted(eventId, albumId));
     }
 
     /** Double vérification : l'événement est à moi, ET l'album est bien dans cet événement. */
