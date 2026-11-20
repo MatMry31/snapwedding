@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: snapwedding
+  threads:
+    virtual:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 15MB      # taille max d'une photo (au-delà : 413)
+      max-request-size: 60MB   # plusieurs photos dans un même envoi
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:snapwedding}
+    username: ${DB_USER:snap}
+    password: ${DB_PASSWORD:snap}
+  jpa:
+    hibernate:
+      ddl-auto: update   # dev uniquement
+    show-sql: true       # utile pour montrer l'absence de N+1 en soutenance
+    properties:
+      hibernate:
+        format_sql: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://accounts.google.com
+          audiences: ${GOOGLE_CLIENT_ID}
+  modulith:
+    events:
+      # Les événements déjà traités sont supprimés du registre (table event_publication)
+      completion-mode: delete
+
+storage:
+  s3:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    region: us-east-1
+    access-key: ${S3_ACCESS_KEY:rustfsadmin}
+    secret-key: ${S3_SECRET_KEY:rustfsadmin}
+    bucket: ${S3_BUCKET:snapwedding}
+
+snapwedding:
+  # URL du front vers laquelle pointe le QR code : {public-base-url}/e/{code}
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:5173}
+  security:
+    # "sub" Google des super-admins, séparés par des virgules
+    super-admin-subs: ${SUPER_ADMIN_SUBS:}
