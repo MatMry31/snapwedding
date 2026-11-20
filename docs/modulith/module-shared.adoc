@@ -2,4 +2,6 @@
 |===
 |Base package
 |`fr.limayrac.snapwedding.shared`
+|Spring components
+|* `f.l.s.s.security.CurrentUser`
 |===

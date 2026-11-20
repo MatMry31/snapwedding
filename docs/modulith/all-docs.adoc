@@ -5,14 +5,6 @@ plantuml::components.puml[,,format=svg]
 plantuml::module-admin.puml[,,format=svg]
 include::module-admin.adoc[]
 
-== Albums
-plantuml::module-album.puml[,,format=svg]
-include::module-album.adoc[]
-
-== Événements
-plantuml::module-event.puml[,,format=svg]
-include::module-event.adoc[]
-
 == Invités
 plantuml::module-guest.puml[,,format=svg]
 include::module-guest.adoc[]
@@ -24,4 +16,12 @@ include::module-media.adoc[]
 == Partagé
 plantuml::module-shared.puml[,,format=svg]
 include::module-shared.adoc[]
+
+== Événements
+plantuml::module-event.puml[,,format=svg]
+include::module-event.adoc[]
+
+== Albums
+plantuml::module-album.puml[,,format=svg]
+include::module-album.adoc[]
 

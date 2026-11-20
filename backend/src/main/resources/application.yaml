@@ -1,6 +1,12 @@
 spring:
   application:
     name: snapwedding
+  config:
+    # Lit le fichier .env à la racine du dépôt (GOOGLE_CLIENT_ID...), que l'on lance
+    # depuis backend/ (mvnw) ou depuis la racine (IntelliJ). "optional:" : pas d'erreur s'il manque.
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
   threads:
     virtual:
       enabled: true
@@ -12,7 +18,17 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:snapwedding}
     username: ${DB_USER:snap}
     password: ${DB_PASSWORD:snap}
+  jackson:
+    deserialization:
+      # Anti mass assignment : un champ JSON absent du DTO (ex : "status", "ownerId") => 400,
+      # au lieu d'être ignoré en silence
+      fail-on-unknown-properties: true
+  data:
+    web:
+      pageable:
+        max-page-size: 100   # empêche ?size=1000000
   jpa:
+    open-in-view: false  # la session Hibernate se ferme avec la transaction : pas de requêtes SQL cachées dans le controller
     hibernate:
       ddl-auto: update   # dev uniquement
     show-sql: true       # utile pour montrer l'absence de N+1 en soutenance

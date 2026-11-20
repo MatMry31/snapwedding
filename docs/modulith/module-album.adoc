@@ -2,4 +2,8 @@
 |===
 |Base package
 |`fr.limayrac.snapwedding.album`
+|Bean references
+|* `f.l.s.e.EventApi` (in Événements)
+|Events listened to
+|* `f.l.s.e.EventDeleted` (async) 
 |===
